@@ -1,0 +1,1 @@
+export { useOtpProcessor } from './useOtpProcessor';
