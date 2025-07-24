@@ -3,6 +3,14 @@ import { OTPRecord, Configuration } from '../types';
 import { updateOTPRecord } from './storageService';
 import { sendDirectEmail } from './directEmailService';
 
+// Track forwarded OTPs to prevent duplicates
+const forwardedOTPs = new Set<string>();
+
+// Clear old entries every 5 minutes
+setInterval(() => {
+  forwardedOTPs.clear();
+}, 5 * 60 * 1000);
+
 /**
  * Forward OTP via webhook
  */
@@ -123,6 +131,18 @@ export const forwardOTP = async (
   otpRecord: OTPRecord,
   config: Configuration
 ): Promise<boolean> => {
+  // Create a unique key for this OTP to prevent duplicates
+  const otpKey = `${otpRecord.otp}-${otpRecord.sender}-${otpRecord.timestamp.getTime()}`;
+  
+  // Check if we've already forwarded this OTP
+  if (forwardedOTPs.has(otpKey)) {
+    console.log('OTP already forwarded, skipping duplicate:', otpKey);
+    return true; // Return true since it was already forwarded
+  }
+  
+  // Mark this OTP as being forwarded
+  forwardedOTPs.add(otpKey);
+  
   let forwarded = false;
 
   // Try webhook forwarding
