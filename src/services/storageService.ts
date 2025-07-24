@@ -1,6 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { NativeModules } from 'react-native';
 import { Configuration, OTPRecord } from '../types';
 import { getDefaultKeywords } from '../utils/otpUtils';
+
+const { ConfigSyncModule } = NativeModules;
 
 // Storage keys
 const CONFIG_KEY = 'otp_link_config';
@@ -12,6 +15,7 @@ const DEFAULT_CONFIG: Configuration = {
   otpMinLength: 4,
   otpMaxLength: 8,
   webhookUrl: '',
+  smsListenerEnabled: true,
   emailSettings: {
     smtpHost: '',
     smtpPort: 587,
@@ -26,7 +30,20 @@ const DEFAULT_CONFIG: Configuration = {
  */
 export const saveConfiguration = async (config: Configuration): Promise<void> => {
   try {
-    await AsyncStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+    const configJson = JSON.stringify(config);
+    await AsyncStorage.setItem(CONFIG_KEY, configJson);
+    
+    // Sync to native SharedPreferences for background access
+    if (ConfigSyncModule) {
+      try {
+        await ConfigSyncModule.syncConfigToNative(configJson);
+        console.log('Configuration synced to native for background processing');
+      } catch (syncError) {
+        console.error('Error syncing config to native:', syncError);
+      }
+    }
+    
+    console.log('Configuration saved successfully');
   } catch (error) {
     console.error('Error saving configuration:', error);
     throw error;
@@ -40,7 +57,12 @@ export const loadConfiguration = async (): Promise<Configuration> => {
   try {
     const configStr = await AsyncStorage.getItem(CONFIG_KEY);
     if (configStr) {
-      return JSON.parse(configStr);
+      const config = JSON.parse(configStr);
+      // Handle backward compatibility - if smsListenerEnabled is not set, default to true
+      if (config.smsListenerEnabled === undefined) {
+        config.smsListenerEnabled = true;
+      }
+      return config;
     }
     return DEFAULT_CONFIG;
   } catch (error) {

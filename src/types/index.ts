@@ -14,6 +14,7 @@ export interface Configuration {
   otpMinLength: number;
   otpMaxLength: number;
   webhookUrl: string;
+  smsListenerEnabled: boolean;
   emailSettings: {
     smtpHost: string;
     smtpPort: number;

@@ -10,7 +10,6 @@ interface ServiceStatusProps {
 
 const ServiceStatus: React.FC<ServiceStatusProps> = ({ config, smsListenerActive }) => {
   const theme = useTheme();
-  const webhookEnabled = !!config.webhookUrl;
   const emailEnabled = !!config.emailSettings.recipient;
 
   const StatusBadge = ({ active, label }: { active: boolean; label: string }) => (
@@ -43,16 +42,7 @@ const ServiceStatus: React.FC<ServiceStatusProps> = ({ config, smsListenerActive
           </View>
         </View>
         
-        <View style={styles.statusItem}>
-          <View style={styles.statusHeader}>
-            <Text style={[styles.statusTitle, { color: theme.colors.onSurface }]}>Webhook Forwarding</Text>
-            <StatusBadge active={webhookEnabled} label={webhookEnabled ? 'Enabled' : 'Disabled'} />
-          </View>
-          {webhookEnabled && (
-            <Text style={[styles.statusDescription, { color: theme.colors.onSurfaceVariant }]}>{config.webhookUrl}</Text>
-          )}
-        </View>
-        
+
         <View style={styles.statusItem}>
           <View style={styles.statusHeader}>
             <Text style={[styles.statusTitle, { color: theme.colors.onSurface }]}>Email Forwarding</Text>

@@ -21,14 +21,14 @@ export const startRealSmsListener = async (
     
     // Add SMS listener using DeviceEventEmitter
     smsListener = DeviceEventEmitter.addListener('onSMSReceived', async (message) => {
-      console.log('SMS received via DeviceEventEmitter:', message);
+      console.log('SMS received via DeviceEventEmitter (background):', message);
       
       try {
         const config = await loadConfiguration();
         const sender = message.originatingAddress || message.address || 'Unknown';
         const body = message.messageBody || message.body || '';
         
-        console.log('Processing SMS:', { sender, body });
+        console.log('Processing background SMS:', { sender, body });
         
         const otpRecord = processMessage(
           sender,
@@ -39,7 +39,7 @@ export const startRealSmsListener = async (
         );
         
         if (otpRecord) {
-          console.log('OTP detected from real SMS:', otpRecord);
+          console.log('OTP detected from background SMS:', otpRecord);
           await saveOTPRecord(otpRecord);
           onOtpReceived(otpRecord);
           
@@ -47,13 +47,13 @@ export const startRealSmsListener = async (
           try {
             const { forwardOTP } = require('./forwardingService');
             const forwarded = await forwardOTP(otpRecord, config);
-            console.log('Auto-forwarding result:', forwarded);
+            console.log('Background auto-forwarding result:', forwarded);
           } catch (forwardError) {
-            console.error('Error auto-forwarding OTP:', forwardError);
+            console.error('Error auto-forwarding background OTP:', forwardError);
           }
         }
       } catch (error) {
-        console.error('Error processing real SMS:', error);
+        console.error('Error processing background SMS:', error);
       }
     });
     

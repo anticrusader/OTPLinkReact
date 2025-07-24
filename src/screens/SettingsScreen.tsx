@@ -23,7 +23,6 @@ const SettingsScreen = () => {
   const [config, setConfig] = useState<Configuration | null>(null);
   const [originalConfig, setOriginalConfig] = useState<Configuration | null>(null);
   const [loading, setLoading] = useState(true);
-  const [webhookEnabled, setWebhookEnabled] = useState(false);
   const [emailEnabled, setEmailEnabled] = useState(false);
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
@@ -35,7 +34,6 @@ const SettingsScreen = () => {
         const configuration = await loadConfiguration();
         setConfig(configuration);
         setOriginalConfig(JSON.parse(JSON.stringify(configuration))); // Deep copy
-        setWebhookEnabled(!!configuration.webhookUrl);
         setEmailEnabled(!!configuration.emailSettings.recipient);
         setLoading(false);
       } catch (error) {
@@ -138,11 +136,7 @@ const SettingsScreen = () => {
         return;
       }
 
-      // Validate webhook URL if enabled
-      if (webhookEnabled && !configToSave.webhookUrl) {
-        Alert.alert('Validation Error', 'Please enter a webhook URL');
-        return;
-      }
+
 
       // Validate email settings if enabled
       if (emailEnabled) {
@@ -156,10 +150,7 @@ const SettingsScreen = () => {
         }
       }
 
-      // Clear webhook URL if disabled
-      if (!webhookEnabled) {
-        configToSave.webhookUrl = '';
-      }
+
 
       // Clear email settings if disabled
       if (!emailEnabled) {
@@ -284,42 +275,7 @@ const SettingsScreen = () => {
         </Card.Content>
       </Card>
 
-      {/* Webhook Settings */}
-      <Card style={styles.card}>
-        <Card.Content>
-          <View style={styles.settingHeader}>
-            <Title>Webhook Forwarding</Title>
-            <Switch
-              value={webhookEnabled}
-              onValueChange={setWebhookEnabled}
-            />
-          </View>
-          
-          {webhookEnabled && (
-            <>
-              <TextInput
-                label="Webhook URL"
-                value={config.webhookUrl}
-                onChangeText={(value) => updateConfig('webhookUrl', value)}
-                placeholder="https://example.com/webhook"
-                style={styles.input}
-                mode="outlined"
-                keyboardType="url"
-                autoCapitalize="none"
-              />
-              
-              <Button
-                mode="outlined"
-                onPress={testWebhook}
-                style={styles.button}
-                disabled={!config.webhookUrl}
-              >
-                Test Webhook
-              </Button>
-            </>
-          )}
-        </Card.Content>
-      </Card>
+
 
       {/* Email Settings */}
       <Card style={styles.card}>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Button,
   Chip,
@@ -15,6 +16,7 @@ import { getDefaultKeywords } from '../utils/otpUtils';
 import { Configuration } from '../types';
 
 const KeywordManagerScreen = () => {
+  const insets = useSafeAreaInsets();
   const [config, setConfig] = useState<Configuration | null>(null);
   const [loading, setLoading] = useState(true);
   const [newKeyword, setNewKeyword] = useState('');
@@ -106,8 +108,11 @@ const KeywordManagerScreen = () => {
   }
 
   return (
-    <View style={styles.container}>
-      <ScrollView style={styles.scrollView}>
+    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 }]}
+      >
         <Card style={styles.card}>
           <Card.Content>
             <Title style={styles.title}>Manage Keywords</Title>
@@ -121,6 +126,7 @@ const KeywordManagerScreen = () => {
                 value={newKeyword}
                 onChangeText={setNewKeyword}
                 style={styles.input}
+                mode="outlined"
               />
               <IconButton
                 icon="plus"
@@ -128,6 +134,7 @@ const KeywordManagerScreen = () => {
                 onPress={addKeyword}
                 disabled={!newKeyword.trim()}
                 style={styles.addButton}
+                mode="contained"
               />
             </View>
 
@@ -141,6 +148,7 @@ const KeywordManagerScreen = () => {
                     onClose={() => removeKeyword(keyword)}
                     style={styles.chip}
                     textStyle={styles.chipText}
+                    mode="flat"
                   >
                     {keyword}
                   </Chip>
@@ -149,24 +157,29 @@ const KeywordManagerScreen = () => {
             </View>
           </Card.Content>
         </Card>
-      </ScrollView>
 
-      <View style={styles.buttonContainer}>
-        <Button
-          mode="outlined"
-          onPress={resetToDefault}
-          style={[styles.button, styles.resetButton]}
-        >
-          Reset to Default
-        </Button>
-        <Button
-          mode="contained"
-          onPress={saveKeywords}
-          style={[styles.button, styles.saveButton]}
-        >
-          Save Keywords
-        </Button>
-      </View>
+        {/* Buttons moved inside ScrollView */}
+        <View style={styles.buttonContainer}>
+          <Button
+            mode="outlined"
+            onPress={resetToDefault}
+            style={[styles.button, styles.resetButton]}
+            icon="refresh"
+            contentStyle={styles.buttonContent}
+          >
+            Reset to Default
+          </Button>
+          <Button
+            mode="contained"
+            onPress={saveKeywords}
+            style={[styles.button, styles.saveButton]}
+            icon="content-save"
+            contentStyle={styles.buttonContent}
+          >
+            Save Keywords
+          </Button>
+        </View>
+      </ScrollView>
 
       <Snackbar
         visible={snackbarVisible}
@@ -182,7 +195,7 @@ const KeywordManagerScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#FFFBFE',
   },
   loadingContainer: {
     flex: 1,
@@ -192,61 +205,73 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  scrollContent: {
+    flexGrow: 1,
+  },
   card: {
     margin: 16,
+    elevation: 3,
+    borderRadius: 12,
   },
   title: {
     marginBottom: 8,
+    fontSize: 20,
+    fontWeight: 'bold',
   },
   description: {
     marginBottom: 16,
     color: '#757575',
+    fontSize: 14,
   },
   inputContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     marginBottom: 16,
+    gap: 8,
   },
   input: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   addButton: {
     margin: 0,
-    backgroundColor: '#e0e0e0',
   },
   keywordsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    marginTop: 8,
   },
   chip: {
     margin: 4,
+    backgroundColor: '#E8DEF8',
   },
   chipText: {
     fontSize: 14,
+    color: '#1D192B',
   },
   emptyText: {
     fontStyle: 'italic',
     color: '#757575',
     marginVertical: 16,
+    textAlign: 'center',
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     padding: 16,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    gap: 12,
   },
   button: {
     flex: 1,
+    borderRadius: 24,
   },
   resetButton: {
-    marginRight: 8,
+    borderColor: '#6750A4',
   },
   saveButton: {
-    marginLeft: 8,
-    backgroundColor: '#6200ee',
+    backgroundColor: '#6750A4',
+  },
+  buttonContent: {
+    height: 40,
   },
 });
 

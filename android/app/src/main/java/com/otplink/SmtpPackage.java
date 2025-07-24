@@ -14,6 +14,8 @@ public class SmtpPackage implements ReactPackage {
     public List<NativeModule> createNativeModules(ReactApplicationContext reactContext) {
         List<NativeModule> modules = new ArrayList<>();
         modules.add(new SmtpModule(reactContext));
+        modules.add(new ConfigSyncModule(reactContext));
+        modules.add(new SmsTestModule(reactContext));
         return modules;
     }
 

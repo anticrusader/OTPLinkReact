@@ -12,8 +12,12 @@ import {
   Text, 
   ActivityIndicator,
   Chip,
-  Divider
+  Divider,
+  Switch
 } from 'react-native-paper';
+import { NativeModules } from 'react-native';
+
+const { SmsTestModule } = NativeModules;
 import { ServiceStatus } from '../components';
 import { RootStackParamList, OTPRecord } from '../types';
 import { forwardOTP } from '../services/forwardingService';
@@ -35,7 +39,8 @@ const DashboardScreen = () => {
     loading,
     smsListenerActive,
     loadData,
-    initSmsListener
+    initSmsListener,
+    stopSmsListener
   } = useOtpProcessor();
 
   // Handle refresh
@@ -193,83 +198,72 @@ const DashboardScreen = () => {
                 config={config} 
                 smsListenerActive={smsListenerActive} 
               />
-              <CustomButton
-                title="Refresh Status"
-                mode="outlined"
-                icon="refresh"
-                onPress={async () => {
-                  console.log('Refreshing status...');
-                  await loadData();
-                  const status = await SmsService.getSmsStatus();
-                  console.log('Current SMS status:', status);
-                }}
-              />
             </View>
           )}
           
-          <View style={styles.buttonContainer}>
-            {!smsListenerActive && (
-              <CustomButton
-                title="Activate SMS Listener"
-                mode="contained"
-                icon="cellphone-message"
-                onPress={async () => {
-                  console.log('Activate SMS Listener button pressed');
-                  
-                  try {
-                    // Start the listener directly
-                    const result = await initSmsListener();
-                    console.log('SMS Listener initialization result:', result);
-                    
-                    if (result) {
-                      Alert.alert(
-                        'SMS Listener Activated',
-                        'The app is now monitoring for incoming OTP messages.',
-                        [{ text: 'OK' }]
-                      );
-                    } else {
-                      Alert.alert(
-                        'Activation Failed',
-                        'Failed to activate SMS listener. Please check permissions in settings.',
-                        [
-                          { text: 'OK' },
-                          { 
-                            text: 'Open Settings', 
-                            onPress: () => Linking.openSettings() 
+          <View style={styles.smsToggleContainer}>
+            <Card style={styles.toggleCard}>
+              <Card.Content>
+                <View style={styles.toggleRow}>
+                  <View style={styles.toggleInfo}>
+                    <Text style={styles.toggleLabel}>SMS Listener</Text>
+                    <Text style={styles.toggleDescription}>
+                      {smsListenerActive ? 'Monitoring SMS messages for OTPs' : 'SMS monitoring is disabled'}
+                    </Text>
+                  </View>
+                  <Switch
+                    value={smsListenerActive}
+                    onValueChange={async (value) => {
+                      console.log('Toggle switch changed to:', value);
+                      
+                      if (value) {
+                        // Start SMS listener
+                        console.log('Starting SMS listener...');
+                        try {
+                          const result = await initSmsListener();
+                          console.log('SMS listener start result:', result);
+                          
+                          if (!result) {
+                            Alert.alert(
+                              'Activation Failed',
+                              'Failed to activate SMS listener. Please check permissions in settings.',
+                              [
+                                { text: 'OK' },
+                                { 
+                                  text: 'Open Settings', 
+                                  onPress: () => Linking.openSettings() 
+                                }
+                              ]
+                            );
                           }
-                        ]
-                      );
-                    }
-                  } catch (error) {
-                    console.error('Error activating SMS listener:', error);
-                    Alert.alert(
-                      'Activation Error',
-                      'An error occurred while activating the SMS listener.',
-                      [{ text: 'OK' }]
-                    );
-                  }
-                }}
-              />
-            )}
+                        } catch (error) {
+                          console.error('Error starting SMS listener:', error);
+                          Alert.alert(
+                            'Activation Error',
+                            'An error occurred while activating the SMS listener.',
+                            [{ text: 'OK' }]
+                          );
+                        }
+                      } else {
+                        // Stop SMS listener
+                        console.log('Stopping SMS listener...');
+                        try {
+                          const result = await stopSmsListener();
+                          console.log('SMS listener stop result:', result);
+                          
+                          // Force refresh the status
+                          await loadData();
+                        } catch (error) {
+                          console.error('Error stopping SMS listener:', error);
+                        }
+                      }
+                    }}
+                  />
+                </View>
+              </Card.Content>
+            </Card>
             
-            <CustomButton
-              title="Debug Status"
-              mode="outlined"
-              icon="information"
-              onPress={async () => {
-                const status = await SmsService.getSmsStatus();
-                Alert.alert(
-                  'SMS Status Debug',
-                  `Permissions: ${status.hasPermissions}\nListener Active: ${status.isListenerActive}\nPlatform: ${status.platform}`,
-                  [
-                    { text: 'OK' },
-                    { text: 'Test OTP', onPress: () => SmsService.testOtpDetection('Your OTP is 123456 for verification') },
-                    { text: 'Test Real SMS', onPress: () => SmsService.testRealSms() },
-                    { text: 'Open Settings', onPress: () => Linking.openSettings() }
-                  ]
-                );
-              }}
-            />
+
           </View>
           
           <Divider style={styles.divider} />
@@ -395,6 +389,38 @@ const styles = StyleSheet.create({
   fabContent: {
     width: 56,
     height: 56,
+  },
+  smsToggleContainer: {
+    margin: 16,
+    marginTop: 0,
+  },
+  toggleCard: {
+    elevation: 2,
+    borderRadius: 12,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  toggleInfo: {
+    flex: 1,
+    marginRight: 16,
+  },
+  toggleLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  toggleDescription: {
+    fontSize: 12,
+    color: '#E0E0E0',
+    lineHeight: 16,
+  },
+  testButton: {
+    flex: 1,
+    marginHorizontal: 4,
   },
   divider: {
     height: 1,

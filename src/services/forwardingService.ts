@@ -1,7 +1,9 @@
-import { Alert } from 'react-native';
+import { Alert, NativeModules } from 'react-native';
 import { OTPRecord, Configuration } from '../types';
 import { updateOTPRecord } from './storageService';
 import { sendDirectEmail } from './directEmailService';
+
+const { ConfigSyncModule } = NativeModules;
 
 // Track forwarded OTPs to prevent duplicates
 const forwardedOTPs = new Set<string>();
@@ -131,12 +133,45 @@ export const forwardOTP = async (
   otpRecord: OTPRecord,
   config: Configuration
 ): Promise<boolean> => {
-  // Create a unique key for this OTP to prevent duplicates
-  const otpKey = `${otpRecord.otp}-${otpRecord.sender}-${otpRecord.timestamp.getTime()}`;
+  // Skip forwarding if already forwarded
+  if (otpRecord.forwarded) {
+    console.log('OTP already forwarded, skipping:', otpRecord.otp);
+    return true;
+  }
   
-  // Check if we've already forwarded this OTP
+  // Check if this OTP was already processed in background
+  if (ConfigSyncModule) {
+    try {
+      const alreadyProcessed = await ConfigSyncModule.isOtpAlreadyProcessed(
+        otpRecord.otp, 
+        otpRecord.sender, 
+        otpRecord.timestamp.getTime()
+      );
+      
+      if (alreadyProcessed) {
+        console.log('OTP already processed in background, skipping:', otpRecord.otp);
+        
+        // Update the record to show it was forwarded
+        const updatedRecord: OTPRecord = {
+          ...otpRecord,
+          forwarded: true,
+          forwardingMethod: 'email',
+        };
+        await updateOTPRecord(updatedRecord);
+        
+        return true;
+      }
+    } catch (error) {
+      console.error('Error checking background processing status:', error);
+    }
+  }
+  
+  // Create a unique key for this OTP to prevent duplicates (use 5-minute window)
+  const otpKey = `${otpRecord.otp}-${otpRecord.sender}-${Math.floor(otpRecord.timestamp.getTime() / 300000)}`;
+  
+  // Check if we've already forwarded this OTP in this session
   if (forwardedOTPs.has(otpKey)) {
-    console.log('OTP already forwarded, skipping duplicate:', otpKey);
+    console.log('OTP already forwarded in this session, skipping duplicate:', otpKey);
     return true; // Return true since it was already forwarded
   }
   

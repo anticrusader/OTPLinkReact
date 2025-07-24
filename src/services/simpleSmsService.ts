@@ -182,12 +182,34 @@ export const startSmsRetriever = async (
  * Stop SMS monitoring
  */
 export const stopSmsRetriever = (): void => {
+  console.log('Stopping all SMS services...');
+  
+  // Stop the timer
   if (pollingTimer) {
     clearInterval(pollingTimer);
     pollingTimer = null;
   }
+  
+  // Stop real SMS listener
+  try {
+    const { stopRealSmsListener } = require('./realSmsService');
+    stopRealSmsListener();
+    console.log('Real SMS listener stopped');
+  } catch (error) {
+    console.error('Error stopping real SMS listener:', error);
+  }
+  
+  // Stop SMS polling
+  try {
+    const { stopSmsPolling } = require('./smsPollingService');
+    stopSmsPolling();
+    console.log('SMS polling stopped');
+  } catch (error) {
+    console.error('Error stopping SMS polling:', error);
+  }
+  
   isActive = false;
-  console.log('SMS monitoring stopped');
+  console.log('All SMS monitoring services stopped');
 };
 
 /**
@@ -202,6 +224,7 @@ export const isSmsListenerActive = (): boolean => {
     isActive = timerActive;
   }
 
+  console.log('SMS listener status check:', { isActive, timerActive, pollingTimer: !!pollingTimer });
   return isActive;
 };
 
