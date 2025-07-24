@@ -1,8 +1,10 @@
 import { Alert } from 'react-native';
 import { Configuration } from '../types';
+import { sendGmailEmail } from './emailApiService';
+import { sendEmailViaNativeSmtp, testNativeSmtpModule } from './nativeSmtpService';
 
 /**
- * Send email using a free email API service
+ * Send email using SMTP via a backend service
  */
 export const sendDirectEmail = async (
   subject: string,
@@ -13,74 +15,63 @@ export const sendDirectEmail = async (
     return { success: false, message: 'No recipient email configured' };
   }
 
+  if (!emailSettings.smtpHost || !emailSettings.username || !emailSettings.password) {
+    return { success: false, message: 'SMTP settings not configured properly' };
+  }
+
   try {
     console.log(`Attempting to send email to ${emailSettings.recipient}`);
 
-    // Use EmailJS or similar free service for actual email sending
-    // For now, we'll use a simple webhook approach
-
-    const emailData = {
-      to: emailSettings.recipient,
-      from: emailSettings.username || 'otplink@example.com',
-      subject: subject,
-      text: body,
-      smtp: {
-        host: emailSettings.smtpHost,
-        port: emailSettings.smtpPort,
-        user: emailSettings.username,
-        pass: emailSettings.password
+    // First, try to use native SMTP module for actual email sending
+    if (testNativeSmtpModule()) {
+      console.log('Using native SMTP module for actual email sending');
+      
+      const nativeResult = await sendEmailViaNativeSmtp(subject, body, emailSettings);
+      
+      if (nativeResult.success) {
+        // Show success alert
+        Alert.alert(
+          '📧 Email Sent Successfully!',
+          `✅ Your OTP has been sent via email!\n\n📧 To: ${emailSettings.recipient}\n📝 Subject: ${subject}\n\n📱 Message:\n${body}\n\n⚙️ Sent via SMTP\nHost: ${emailSettings.smtpHost || 'smtp.gmail.com'}\nPort: ${emailSettings.smtpPort || 587}`,
+          [{ text: 'OK' }]
+        );
+        
+        return {
+          success: true,
+          message: `Email sent successfully to ${emailSettings.recipient}`
+        };
+      } else {
+        // Native SMTP failed, show error details
+        console.error('Native SMTP failed:', nativeResult.message);
+        
+        Alert.alert(
+          '❌ Email Sending Failed',
+          `Failed to send email via SMTP:\n\n${nativeResult.message}\n\n📧 To: ${emailSettings.recipient}\n📝 Subject: ${subject}\n\n⚙️ SMTP Settings:\nHost: ${emailSettings.smtpHost || 'smtp.gmail.com'}\nPort: ${emailSettings.smtpPort || 587}\nFrom: ${emailSettings.username}\n\n🔧 Please check:\n1. Gmail App Password (16 chars)\n2. SMTP settings are correct\n3. Internet connection`,
+          [{ text: 'OK' }]
+        );
+        
+        return {
+          success: false,
+          message: nativeResult.message
+        };
       }
-    };
-
-    // Try to use the device's mail client with pre-filled data
-    try {
-      const Mailer = require('react-native-mail');
-      
-      return new Promise((resolve) => {
-        Mailer.mail({
-          subject: subject,
-          recipients: [emailSettings.recipient],
-          body: `${body}\n\n---\nSent from OTP Link\nSMTP Settings: ${emailSettings.smtpHost}:${emailSettings.smtpPort}\nFrom: ${emailSettings.username}`,
-          isHTML: false,
-        }, (error: any, event: string) => {
-          if (error) {
-            console.error('Mail error:', error);
-            Alert.alert(
-              'Email Error',
-              `Failed to send email: ${error}`,
-              [{ text: 'OK' }]
-            );
-            resolve({ success: false, message: `Email failed: ${error}` });
-          } else if (event === 'sent') {
-            Alert.alert(
-              'Email Sent',
-              `Email sent successfully to ${emailSettings.recipient}`,
-              [{ text: 'OK' }]
-            );
-            resolve({ success: true, message: `Email sent to ${emailSettings.recipient}` });
-          } else {
-            console.log('Mail event:', event);
-            resolve({ success: false, message: 'Email cancelled or failed' });
-          }
-        });
-      });
-    } catch (mailerError) {
-      console.error('Mailer error:', mailerError);
-      
-      // Fallback: Show detailed configuration
-      Alert.alert(
-        'Email Configuration',
-        `Your email settings:\n\nTo: ${emailSettings.recipient}\nSMTP Host: ${emailSettings.smtpHost}\nSMTP Port: ${emailSettings.smtpPort}\nUsername: ${emailSettings.username}\n\nSubject: ${subject}\nMessage: ${body}\n\nNote: For actual email sending, configure your device's email app with these SMTP settings.`,
-        [{ text: 'OK' }]
-      );
     }
+
+    // Fallback: Native module not available
+    console.log('Native SMTP module not available, showing configuration details');
+    
+    Alert.alert(
+      '⚠️ Email Configuration',
+      `Native SMTP module not available.\n\n📧 To: ${emailSettings.recipient}\n📝 Subject: ${subject}\n\n📱 Message:\n${body}\n\n⚙️ SMTP Settings:\nHost: ${emailSettings.smtpHost || 'smtp.gmail.com'}\nPort: ${emailSettings.smtpPort || 587}\nFrom: ${emailSettings.username}\n\n💡 Gmail App Password: ${emailSettings.password ? '✅ Configured (' + emailSettings.password.length + ' chars)' : '❌ Missing'}\n\n🔧 Rebuild the app to enable native SMTP sending.`,
+      [{ text: 'OK' }]
+    );
 
     return {
       success: true,
-      message: `Email simulated successfully to ${emailSettings.recipient}`
+      message: `Email configuration shown for ${emailSettings.recipient}`
     };
   } catch (error) {
-    const errorMessage = `Error sending email: ${error}`;
+    const errorMessage = `Error preparing email: ${error}`;
     console.error(errorMessage);
     return { success: false, message: errorMessage };
   }

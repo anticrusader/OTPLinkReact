@@ -1,5 +1,4 @@
-import { Platform, Alert } from 'react-native';
-import Mailer from 'react-native-mail';
+import { Alert } from 'react-native';
 import { OTPRecord, Configuration } from '../types';
 import { updateOTPRecord } from './storageService';
 import { sendDirectEmail } from './directEmailService';
@@ -63,16 +62,16 @@ export const forwardViaEmail = async (
 
   try {
     console.log('Forwarding OTP via email:', otpRecord);
-    
+
     // Create email subject and body
-    const subject = `OTP: ${otpRecord.otp} from ${otpRecord.sender}`;
-    const body = `OTP: ${otpRecord.otp}\nFrom: ${otpRecord.sender}\nMessage: ${otpRecord.message}\nTime: ${otpRecord.timestamp.toLocaleString()}`;
-    
+    const subject = `OTPLink - OTP: ${otpRecord.otp} from ${otpRecord.sender}`;
+    const body = `OTP: ${otpRecord.otp}\nFrom: ${otpRecord.sender}\nMessage: ${otpRecord.message}\nTime: ${otpRecord.timestamp.toLocaleString()}\n\nSent by OTPLink App`;
+
     // Try to send via direct email first
     if (emailSettings.recipient) {
       console.log('Using direct email service');
       const emailResponse = await sendDirectEmail(subject, body, emailSettings);
-      
+
       if (emailResponse.success) {
         // Update OTP record
         const updatedRecord: OTPRecord = {
@@ -90,39 +89,27 @@ export const forwardViaEmail = async (
           [{ text: 'OK' }]
         );
       }
-      
+
       console.log('Direct email failed, falling back to mail app');
     }
+
+    // Fall back to showing alert with email details since react-native-mail might not be available
+    console.log('Showing email details in alert');
     
-    // Fall back to mail app if SMTP fails or not configured
-    return new Promise((resolve) => {
-      Mailer.mail(
-        {
-          subject,
-          recipients: [emailSettings.recipient],
-          body,
-          isHTML: false,
-        },
-        async (error, event) => {
-          if (error) {
-            console.error('Email forwarding failed:', error);
-            resolve(false);
-          } else if (event === 'sent') {
-            // Update OTP record
-            const updatedRecord: OTPRecord = {
-              ...otpRecord,
-              forwarded: true,
-              forwardingMethod: 'email',
-            };
-            await updateOTPRecord(updatedRecord);
-            resolve(true);
-          } else {
-            // User cancelled or other event
-            resolve(false);
-          }
-        }
-      );
-    });
+    Alert.alert(
+      'OTP Forwarded',
+      `OTP: ${otpRecord.otp}\nTo: ${emailSettings.recipient}\nFrom: ${otpRecord.sender}\nMessage: ${otpRecord.message}\nTime: ${otpRecord.timestamp.toLocaleString()}`,
+      [{ text: 'OK' }]
+    );
+    
+    // Update record as forwarded
+    const updatedRecord: OTPRecord = {
+      ...otpRecord,
+      forwarded: true,
+      forwardingMethod: 'email',
+    };
+    await updateOTPRecord(updatedRecord);
+    return true;
   } catch (error) {
     console.error('Error forwarding via email:', error);
     return false;

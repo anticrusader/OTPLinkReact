@@ -85,6 +85,13 @@ android {
         versionCode 1
         versionName "1.0"
     }
+    
+    packagingOptions {
+        pickFirst '**/NOTICE.md'
+        pickFirst '**/LICENSE.md'
+        pickFirst '**/META-INF/NOTICE.md'
+        pickFirst '**/META-INF/LICENSE.md'
+    }
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
@@ -116,4 +123,8 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+    
+    // JavaMail for SMTP email sending
+    implementation 'com.sun.mail:android-mail:1.6.7'
+    implementation 'com.sun.mail:android-activation:1.6.7'
 }
