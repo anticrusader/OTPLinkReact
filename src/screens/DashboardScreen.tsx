@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, FlatList, Alert, RefreshControl } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { 
@@ -26,6 +27,7 @@ type DashboardScreenNavigationProp = NativeStackNavigationProp<RootStackParamLis
 const DashboardScreen = () => {
   const navigation = useNavigation<DashboardScreenNavigationProp>();
   const [refreshing, setRefreshing] = useState(false);
+  const insets = useSafeAreaInsets();
   
   const {
     otpRecords,
@@ -53,21 +55,78 @@ const DashboardScreen = () => {
     return unsubscribe;
   }, [navigation, loadData]);
 
+  // Custom Status Badge Component (same as ServiceStatus)
+  const StatusBadge = ({ active, label, icon }: { active: boolean; label: string; icon?: string }) => (
+    <View style={[
+      styles.statusBadge,
+      { backgroundColor: active ? '#E8F5E9' : '#FFF3E0' }
+    ]}>
+      <View style={[
+        styles.statusDot,
+        { backgroundColor: active ? '#4CAF50' : '#FF9800' }
+      ]} />
+      <Text style={[
+        styles.statusText,
+        { color: active ? '#2E7D32' : '#E65100' }
+      ]}>
+        {label}
+      </Text>
+    </View>
+  );
+
+  // Custom Method Badge Component
+  const MethodBadge = ({ method }: { method: string }) => (
+    <View style={[
+      styles.statusBadge,
+      { backgroundColor: '#E3F2FD' }
+    ]}>
+      <View style={[
+        styles.statusDot,
+        { backgroundColor: '#1565C0' }
+      ]} />
+      <Text style={[
+        styles.statusText,
+        { color: '#1565C0' }
+      ]}>
+        Via {method}
+      </Text>
+    </View>
+  );
+
+  // Custom Button Component
+  const CustomButton = ({ title, onPress, mode = 'contained', icon }: { 
+    title: string; 
+    onPress: () => void; 
+    mode?: 'contained' | 'outlined'; 
+    icon?: string;
+  }) => (
+    <View style={[
+      styles.customButton,
+      { backgroundColor: mode === 'contained' ? '#6750A4' : 'transparent' },
+      mode === 'outlined' && { borderWidth: 1, borderColor: '#6750A4' }
+    ]}>
+      <Button
+        mode="text"
+        onPress={onPress}
+        textColor={mode === 'contained' ? '#FFFFFF' : '#6750A4'}
+        icon={icon}
+        contentStyle={styles.buttonContent}
+      >
+        {title}
+      </Button>
+    </View>
+  );
+
   // Render OTP record item
   const renderOtpItem = ({ item }: { item: OTPRecord }) => (
     <Card style={styles.card}>
       <Card.Content>
         <View style={styles.otpHeader}>
           <Title style={styles.otpCode}>{item.otp}</Title>
-          <Chip 
-            icon={item.forwarded ? 'check' : 'clock-outline'}
-            mode="outlined"
-            style={{ 
-              backgroundColor: item.forwarded ? '#e8f5e9' : '#fff3e0',
-            }}
-          >
-            {item.forwarded ? 'Forwarded' : 'Pending'}
-          </Chip>
+          <StatusBadge 
+            active={item.forwarded} 
+            label={item.forwarded ? 'Forwarded' : 'Pending'} 
+          />
         </View>
         
         <Paragraph style={styles.sender}>From: {item.sender}</Paragraph>
@@ -77,14 +136,14 @@ const DashboardScreen = () => {
         </Text>
         
         {item.forwarded && item.forwardingMethod && (
-          <Chip icon="send" style={styles.methodChip}>
-            Via {item.forwardingMethod}
-          </Chip>
+          <MethodBadge method={item.forwardingMethod} />
         )}
         
         {!item.forwarded && config && (
-          <Button 
-            mode="contained" 
+          <CustomButton
+            title="Forward Now"
+            mode="contained"
+            icon="send"
             onPress={async () => {
               if (config) {
                 try {
@@ -113,17 +172,14 @@ const DashboardScreen = () => {
                 }
               }
             }}
-            style={styles.forwardButton}
-          >
-            Forward Now
-          </Button>
+          />
         )}
       </Card.Content>
     </Card>
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#6200ee" />
@@ -137,26 +193,26 @@ const DashboardScreen = () => {
                 config={config} 
                 smsListenerActive={smsListenerActive} 
               />
-              <Button 
-                mode="text" 
+              <CustomButton
+                title="Refresh Status"
+                mode="outlined"
+                icon="refresh"
                 onPress={async () => {
                   console.log('Refreshing status...');
                   await loadData();
                   const status = await SmsService.getSmsStatus();
                   console.log('Current SMS status:', status);
                 }}
-                style={styles.refreshButton}
-                icon="refresh"
-              >
-                Refresh Status
-              </Button>
+              />
             </View>
           )}
           
           <View style={styles.buttonContainer}>
             {!smsListenerActive && (
-              <Button 
-                mode="contained" 
+              <CustomButton
+                title="Activate SMS Listener"
+                mode="contained"
+                icon="cellphone-message"
                 onPress={async () => {
                   console.log('Activate SMS Listener button pressed');
                   
@@ -193,15 +249,13 @@ const DashboardScreen = () => {
                     );
                   }
                 }}
-                style={styles.activateButton}
-                icon="cellphone-message"
-              >
-                Activate SMS Listener
-              </Button>
+              />
             )}
             
-            <Button 
-              mode="outlined" 
+            <CustomButton
+              title="Debug Status"
+              mode="outlined"
+              icon="information"
               onPress={async () => {
                 const status = await SmsService.getSmsStatus();
                 Alert.alert(
@@ -215,11 +269,7 @@ const DashboardScreen = () => {
                   ]
                 );
               }}
-              style={smsListenerActive ? styles.fullWidthButton : styles.settingsButton}
-              icon="information"
-            >
-              Debug Status
-            </Button>
+            />
           </View>
           
           <Divider style={styles.divider} />
@@ -236,20 +286,25 @@ const DashboardScreen = () => {
               data={otpRecords}
               renderItem={renderOtpItem}
               keyExtractor={(item) => item.id}
-              contentContainerStyle={styles.listContainer}
+              contentContainerStyle={[styles.listContainer, { paddingBottom: insets.bottom + 80 }]}
+              showsVerticalScrollIndicator={true}
               refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
               }
             />
           )}
-          
-          <FAB
-            style={styles.fab}
-            icon="cog"
-            onPress={() => navigation.navigate('Settings')}
-          />
         </>
       )}
+      
+      <View style={[styles.customFab, { bottom: insets.bottom + 20 }]}>
+        <Button
+          mode="text"
+          onPress={() => navigation.navigate('Settings')}
+          icon="cog"
+          textColor="#FFFFFF"
+          contentStyle={styles.fabContent}
+        />
+      </View>
     </View>
   );
 };
@@ -257,7 +312,7 @@ const DashboardScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#FFFBFE',
   },
   loadingContainer: {
     flex: 1,
@@ -277,18 +332,69 @@ const styles = StyleSheet.create({
   activateButton: {
     flex: 1,
     marginRight: 8,
+    borderRadius: 24,
   },
   settingsButton: {
     flex: 1,
     marginLeft: 8,
+    borderRadius: 24,
   },
   fullWidthButton: {
     flex: 1,
     margin: 16,
+    borderRadius: 24,
   },
   refreshButton: {
     marginHorizontal: 16,
     marginTop: 0,
+    borderRadius: 24,
+  },
+  buttonContent: {
+    height: 40,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    minWidth: 90,
+    justifyContent: 'center',
+    elevation: 1,
+    marginTop: 8,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  statusText: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  customButton: {
+    borderRadius: 24,
+    marginTop: 8,
+    marginHorizontal: 16,
+    elevation: 2,
+  },
+  customFab: {
+    position: 'absolute',
+    margin: 16,
+    right: 0,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#6750A4',
+    elevation: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fabContent: {
+    width: 56,
+    height: 56,
   },
   divider: {
     height: 1,
@@ -299,7 +405,8 @@ const styles = StyleSheet.create({
   },
   card: {
     marginBottom: 16,
-    elevation: 2,
+    elevation: 3,
+    borderRadius: 12,
   },
   otpHeader: {
     flexDirection: 'row',
@@ -328,7 +435,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   forwardButton: {
-    marginTop: 8,
+    marginTop: 12,
+    borderRadius: 20,
   },
   emptyContainer: {
     flex: 1,
@@ -350,8 +458,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     margin: 16,
     right: 0,
-    bottom: 0,
-    backgroundColor: '#6200ee',
+    bottom: 20,
+    elevation: 6,
   },
 });
 

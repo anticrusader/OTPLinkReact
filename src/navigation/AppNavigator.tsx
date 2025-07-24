@@ -17,12 +17,15 @@ const AppNavigator = () => {
         initialRouteName="Dashboard"
         screenOptions={{
           headerStyle: {
-            backgroundColor: '#6200ee',
+            backgroundColor: '#6750A4',
+            elevation: 4,
           },
-          headerTintColor: '#fff',
+          headerTintColor: '#FFFFFF',
           headerTitleStyle: {
-            fontWeight: 'bold',
+            fontWeight: '600',
+            fontSize: 20,
           },
+          headerShadowVisible: true,
         }}
       >
         <Stack.Screen 
