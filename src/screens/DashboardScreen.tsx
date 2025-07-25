@@ -290,15 +290,18 @@ const DashboardScreen = () => {
         </>
       )}
       
-      <View style={[styles.customFab, { bottom: insets.bottom + 20 }]}>
-        <Button
-          mode="text"
-          onPress={() => navigation.navigate('Settings')}
-          icon="cog"
-          textColor="#FFFFFF"
-          contentStyle={styles.fabContent}
-        />
-      </View>
+      <FAB
+        style={[styles.fab, { bottom: insets.bottom + 20 }]}
+        icon={({ size, color }) => (
+          <Text style={{ 
+            fontSize: size * 0.6, 
+            color, 
+            textAlign: 'center',
+            lineHeight: size * 0.9
+          }}>⚙️</Text>
+        )}
+        onPress={() => navigation.navigate('Settings')}
+      />
     </View>
   );
 };
@@ -374,22 +377,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     elevation: 2,
   },
-  customFab: {
-    position: 'absolute',
-    margin: 16,
-    right: 0,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#6750A4',
-    elevation: 6,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  fabContent: {
-    width: 56,
-    height: 56,
-  },
+
   smsToggleContainer: {
     margin: 16,
     marginTop: 0,
