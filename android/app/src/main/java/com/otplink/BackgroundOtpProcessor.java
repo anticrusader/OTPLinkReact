@@ -245,7 +245,7 @@ public class BackgroundOtpProcessor {
     
     private void saveOtpToReactNativeStorage(String otp, String sender, String message) {
         try {
-            SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            SharedPreferences prefs = context.getSharedPreferences("RN_ASYNC_STORAGE_", Context.MODE_PRIVATE);
             String recordsJson = prefs.getString("otp_link_records", "[]");
             JSONArray recordsArray = new JSONArray(recordsJson);
             
@@ -256,7 +256,7 @@ public class BackgroundOtpProcessor {
             newRecord.put("source", "sms");
             newRecord.put("sender", sender);
             newRecord.put("message", message);
-            newRecord.put("timestamp", new java.util.Date().getTime());
+            newRecord.put("timestamp", new java.util.Date().toInstant().toString());
             newRecord.put("forwarded", true);
             newRecord.put("forwardingMethod", "email");
             
@@ -269,9 +269,13 @@ public class BackgroundOtpProcessor {
             
             SharedPreferences.Editor editor = prefs.edit();
             editor.putString("otp_link_records", newArray.toString());
-            editor.apply();
+            boolean success = editor.commit(); // Use commit for immediate write
+            
+            Log.d(TAG, "SharedPreferences commit success: " + success);
             
             Log.d(TAG, "Saved OTP record to React Native storage");
+            Log.d(TAG, "OTP record: " + newRecord.toString());
+            Log.d(TAG, "Total records now: " + newArray.length());
         } catch (Exception e) {
             Log.e(TAG, "Error saving OTP record", e);
         }

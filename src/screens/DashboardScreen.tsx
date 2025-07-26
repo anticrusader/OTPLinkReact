@@ -60,6 +60,24 @@ const DashboardScreen = () => {
     return unsubscribe;
   }, [navigation, loadData]);
 
+  // Refresh when app comes to foreground (only once)
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: string) => {
+      if (nextAppState === 'active') {
+        console.log('App became active, refreshing OTP data once...');
+        loadData();
+      }
+    };
+
+    const subscription = require('react-native').AppState.addEventListener('change', handleAppStateChange);
+    
+    return () => {
+      subscription?.remove();
+    };
+  }, [loadData]);
+
+
+
   // Custom Status Badge Component (same as ServiceStatus)
   const StatusBadge = ({ active, label, icon }: { active: boolean; label: string; icon?: string }) => (
     <View style={[
